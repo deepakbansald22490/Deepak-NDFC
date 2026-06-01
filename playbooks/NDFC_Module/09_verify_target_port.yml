@@ -1,0 +1,101 @@
+---
+- name: 09. Verify target port before use
+  hosts: ndfc-controller
+  gather_facts: false
+  vars_files:
+    - ../../vars/target_port_query_request.yml
+
+  tasks:
+    - name: Validate target port query input
+      ansible.builtin.assert:
+        that:
+          - target_switch is defined
+          - target_switch in groups['leafs']
+          - target_interface is defined
+          - hostvars[target_switch].switch_ip is defined
+          - hostvars[target_switch].fabric_name is defined
+        fail_msg:
+          - "Inputs target_switch and target_interface are required."
+          - "The target switch must exist in the leafs inventory group with switch_ip and fabric_name in host_vars."
+
+    - name: Show target port query input
+      ansible.builtin.debug:
+        msg:
+          - "target_switch = {{ target_switch }}"
+          - "target_interface = {{ target_interface }}"
+          - "fabric_name = {{ hostvars[target_switch].fabric_name }}"
+          - "switch_ip = {{ hostvars[target_switch].switch_ip }}"
+
+    - name: Query all interfaces for target switch from NDFC
+      cisco.dcnm.dcnm_interface:
+        fabric: "{{ hostvars[target_switch].fabric_name }}"
+        state: query
+        config:
+          - switch:
+              - "{{ hostvars[target_switch].switch_ip }}"
+      register: interface_query_result
+
+    - name: Extract interface query list
+      ansible.builtin.set_fact:
+        switch_interfaces: "{{ interface_query_result.diff[0].query | default([]) }}"
+
+    - name: Select requested interface
+      ansible.builtin.set_fact:
+        target_port_matches: >-
+          {{
+            switch_interfaces
+            | selectattr('ifName', 'equalto', target_interface)
+            | list
+          }}
+
+    - name: Stop if target interface is not found
+      ansible.builtin.fail:
+        msg: "{{ target_interface }} was not found on {{ target_switch }} in NDFC interface inventory."
+      when:
+        - target_port_matches | length == 0
+
+    - name: Store target interface details
+      ansible.builtin.set_fact:
+        target_port: "{{ target_port_matches | first }}"
+
+    - name: Show target port state
+      ansible.builtin.debug:
+        msg:
+          - "interface = {{ target_port.ifName }}"
+          - "type = {{ target_port.ifType | default('unknown') }}"
+          - "admin = {{ target_port.adminStatusStr | default('unknown') }}"
+          - "oper = {{ target_port.operStatusStr | default('unknown') }}"
+          - "mode = {{ target_port.mode | default(target_port.portType | default('unknown'), true) }}"
+          - "description = {{ target_port.description | default('none', true) }}"
+          - "ip_address = {{ target_port.ipAddress | default('none', true) }}"
+          - "neighbour_count = {{ target_port.neighbours | default([], true) | length }}"
+          - "overlay_count = {{ target_port.overlayNetwork | default([], true) | length }}"
+          - "channel_id = {{ target_port.channelId | default('unknown') }}"
+          - "port_channel_membership = {{ target_port.portChannelMemberList | default('none', true) }}"
+          - "edit_allowed = {{ target_port.editAllowed | default(false) }}"
+          - "compliance = {{ target_port.complianceStatus | default('unknown') }}"
+          - "reason = {{ target_port.operStatusCause | default('unknown') }}"
+
+    - name: Verify target port is safe to use
+      ansible.builtin.assert:
+        that:
+          - target_port.ifType | default('') == 'INTERFACE_ETHERNET'
+          - target_port.operStatusStr | default('') == 'down'
+          - target_port.neighbours | default([], true) | length == 0
+          - target_port.overlayNetwork | default([], true) | length == 0
+          - ((target_port.channelId | default(-1)) | int) == -1
+          - (target_port.portChannelMemberList | default(none)) is none
+          - (target_port.ipAddress | default(none)) is none
+          - target_port.editAllowed | default(false)
+        success_msg: "{{ target_interface }} on {{ target_switch }} is safe to use."
+        fail_msg:
+          - "{{ target_interface }} on {{ target_switch }} is not safe to use."
+          - "Required: Ethernet + oper down + no neighbours + no overlay network + no port-channel + no IP + edit allowed."
+          - "Actual type = {{ target_port.ifType | default('unknown') }}"
+          - "Actual oper = {{ target_port.operStatusStr | default('unknown') }}"
+          - "Actual neighbour_count = {{ target_port.neighbours | default([], true) | length }}"
+          - "Actual overlay_count = {{ target_port.overlayNetwork | default([], true) | length }}"
+          - "Actual channel_id = {{ target_port.channelId | default('unknown') }}"
+          - "Actual port_channel_membership = {{ target_port.portChannelMemberList | default('none', true) }}"
+          - "Actual ip_address = {{ target_port.ipAddress | default('none', true) }}"
+          - "Actual edit_allowed = {{ target_port.editAllowed | default(false) }}"

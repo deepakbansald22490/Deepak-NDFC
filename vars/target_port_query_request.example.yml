@@ -1,0 +1,6 @@
+---
+# Target switch must match a host in inventory/inventory.yml under the leafs group.
+target_switch: DC1-Leaf1
+
+# Pick one port from the free-port verification output.
+target_interface: Ethernet1/8
