@@ -1,0 +1,9 @@
+---
+# Target switch must match a host in inventory/inventory.yml under the leafs group.
+target_switch: DC1-Leaf1
+
+# Keep the default broad enough for NX-OS Ethernet ports.
+free_port_name_regex: '^Ethernet'
+
+# Set to true when you want admin/oper/mode/compliance details for each free port.
+show_free_port_details: false

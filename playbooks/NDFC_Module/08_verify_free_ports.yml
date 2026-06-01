@@ -1,0 +1,95 @@
+---
+- name: 08. Verify free ports on target switch
+  hosts: ndfc-controller
+  gather_facts: false
+  vars_files:
+    - ../../vars/free_port_query_request.yml
+
+  tasks:
+    - name: Validate free port query input
+      ansible.builtin.assert:
+        that:
+          - target_switch is defined
+          - target_switch in groups['leafs']
+          - hostvars[target_switch].switch_ip is defined
+          - hostvars[target_switch].fabric_name is defined
+        fail_msg:
+          - "Input target_switch is required and must exist in the leafs inventory group."
+          - "The target switch must have switch_ip and fabric_name in host_vars."
+
+    - name: Show free port query target
+      ansible.builtin.debug:
+        msg:
+          - "target_switch = {{ target_switch }}"
+          - "fabric_name = {{ hostvars[target_switch].fabric_name }}"
+          - "switch_ip = {{ hostvars[target_switch].switch_ip }}"
+
+    - name: Query all interfaces for target switch from NDFC
+      cisco.dcnm.dcnm_interface:
+        fabric: "{{ hostvars[target_switch].fabric_name }}"
+        state: query
+        config:
+          - switch:
+              - "{{ hostvars[target_switch].switch_ip }}"
+      register: interface_query_result
+
+    - name: Extract interface query list
+      ansible.builtin.set_fact:
+        switch_interfaces: "{{ interface_query_result.diff[0].query | default([]) }}"
+
+    - name: Select physical Ethernet interfaces
+      ansible.builtin.set_fact:
+        ethernet_interfaces: >-
+          {{
+            switch_interfaces
+            | selectattr('ifType', 'equalto', 'INTERFACE_ETHERNET')
+            | selectattr('ifName', 'match', free_port_name_regex | default('^Ethernet'))
+            | list
+          }}
+
+    - name: Select candidate free Ethernet ports
+      ansible.builtin.set_fact:
+        free_ethernet_ports: >-
+          {{
+            ethernet_interfaces
+            | selectattr('operStatusStr', 'equalto', 'down')
+            | selectattr('neighbours', 'equalto', [])
+            | selectattr('overlayNetwork', 'equalto', [])
+            | selectattr('channelId', 'equalto', -1)
+            | selectattr('portChannelMemberList', 'equalto', none)
+            | selectattr('ipAddress', 'equalto', none)
+            | selectattr('editAllowed', 'equalto', true)
+            | list
+          }}
+
+    - name: Show free port summary
+      ansible.builtin.debug:
+        msg:
+          - "switch = {{ target_switch }}"
+          - "total_ethernet_ports = {{ ethernet_interfaces | length }}"
+          - "candidate_free_ports = {{ free_ethernet_ports | length }}"
+          - "free_port_rule = Ethernet + oper down + no neighbours + no overlay network + no port-channel + no IP + edit allowed"
+          - "free_ports = {{ free_ethernet_ports | map(attribute='ifName') | list }}"
+
+    - name: Show candidate free ports
+      ansible.builtin.debug:
+        msg:
+          - "interface = {{ item.ifName }}"
+          - "admin = {{ item.adminStatusStr | default('unknown') }}"
+          - "oper = {{ item.operStatusStr | default('unknown') }}"
+          - "mode = {{ item.mode | default(item.portType | default('unknown'), true) }}"
+          - "description = {{ item.description | default('none', true) }}"
+          - "allowed_vlans = {{ item.allowedVLANs | default('none', true) }}"
+          - "compliance = {{ item.complianceStatus | default('unknown') }}"
+          - "reason = {{ item.operStatusCause | default('unknown') }}"
+      loop: "{{ free_ethernet_ports if (show_free_port_details | default(false)) else [] }}"
+      loop_control:
+        label: "{{ item.ifName }}"
+      when:
+        - free_ethernet_ports | length > 0
+
+    - name: Show message when no free ports are found
+      ansible.builtin.debug:
+        msg: "No candidate free Ethernet ports found on {{ target_switch }}."
+      when:
+        - free_ethernet_ports | length == 0
