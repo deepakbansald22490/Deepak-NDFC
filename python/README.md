@@ -1,9 +1,5 @@
 # Learning Python and NDFC
 
-Small Python utilities for NDFC operational validation.
-
-First MVP:
-
 - take an alarm and event snapshot before a change
 - take an alarm and event snapshot after a change
 - compare both snapshots in the terminal
