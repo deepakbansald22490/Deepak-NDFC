@@ -28,13 +28,12 @@ How to run the Script:
 
 ```bash
 python3 tools/ndfc_alarm_diff.py change-start \
-  --change-id CHG001234 \
-  --fabric AO-DC2 \
+  --change-id CHG004567 \
   --notes "planned network change"
 
 # perform the planned change
 
-python3 tools/ndfc_alarm_diff.py change-finish --change-id CHG001234
+python3 tools/ndfc_alarm_diff.py change-finish --change-id CHG004567
 ```
 
 The tool stores all output for that change under:
