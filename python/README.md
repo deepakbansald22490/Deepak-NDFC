@@ -24,7 +24,7 @@ Probe candidate read-only alarm endpoints:
 python3 tools/ndfc_alarm_diff.py probe
 ```
 
-Production-style jump host workflow:
+How to run the Script:
 
 ```bash
 python3 tools/ndfc_alarm_diff.py change-start \
