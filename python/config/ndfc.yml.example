@@ -1,0 +1,25 @@
+---
+ndfc:
+  base_url: "https://192.168.1.10"
+  username: "admin"
+  password: "CHANGE_ME"
+  domain: "local"
+  verify_ssl: false
+  timeout: 30
+
+alarms:
+  # Keep this as a path only, not the full https:// URL.
+  endpoint: "/appcenter/cisco/ndfc/api/v1/alarm/alarms/alarmlist?reqParam={}"
+
+  # Probe checks these read-only candidates.
+  candidate_endpoints:
+    - /appcenter/cisco/ndfc/api/v1/alarm/alarms/alarmcount?reqParam={}
+    - /appcenter/cisco/ndfc/api/v1/alarm/alarms/alarmlist?reqParam={}
+
+events:
+  # Event timeline endpoint verified from NDFC.
+  endpoint: "/appcenter/cisco/ndfc/api/v1/event/em/getEvent"
+
+output:
+  snapshot_dir: "snapshots"
+  run_dir: "runs"

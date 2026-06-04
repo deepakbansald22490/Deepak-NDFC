@@ -13,9 +13,14 @@ inventory/group_vars/ndfc/vars.yml
 inventory/group_vars/ndfc/vault.yml
 inventory/host_vars/*.yml
 vars/network_attach_request.yml
+python/config/ndfc.yml
+python/snapshots/*.json
+python/reports/*
+python/runs/
 
 # Keep safe examples
 !inventory/inventory.example.yml
 !inventory/group_vars/ndfc/vars.example.yml
 !inventory/host_vars/*.example.yml
 !vars/*.example.yml
+!python/config/ndfc.yml.example

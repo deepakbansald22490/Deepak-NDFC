@@ -1,17 +1,61 @@
-# Cisco NDFC Ansible Lab
+# Deepak NDFC Lab
 
-This repository contains my Cisco NDFC automation Ansible playbook, python or many more
+This repository contains Cisco NDFC learning work across Ansible playbooks and Python operational tools.
 
 
 - Cisco NDFC
 - Ansible
+- Python
 - `cisco.dcnm`
 - REST API workflows
 - Read-only prechecks before configuration changes
 
 ## Current Focus
 
-The current playbooks focus on NDFC network attachment workflows:
+The current Ansible playbooks focus on NDFC fabric, VRF, network, inventory, and port validation workflows.
+
+The Python tool focuses on a NOC-style before/after change check:
+
+1. Capture alarms and events before a planned change.
+2. Capture alarms and events after the change.
+3. Compare both snapshots.
+4. Save the terminal report under a per-change run folder.
+
+## Python Jump Host Workflow
+
+The Python workflow is intended to run from a controlled jump host.
+
+```bash
+cd python
+
+cp config/ndfc.yml.example config/ndfc.yml
+chmod 600 config/ndfc.yml
+
+python3 tools/ndfc_alarm_diff.py change-start \
+  --change-id CHG001234 \
+  --fabric AO-DC2 \
+  --notes "planned network change"
+
+# perform the planned change
+
+python3 tools/ndfc_alarm_diff.py change-finish --change-id CHG001234
+```
+
+The tool writes output like this:
+
+```text
+python/runs/CHG001234/
+  metadata.json
+  before.json
+  before.events.json
+  after.json
+  after.events.json
+  report.txt
+```
+
+## Ansible Workflow
+
+The current Ansible playbooks include workflows such as:
 
 1. Query network attachment state from NDFC.
 2. Confirm the target network exists for the target leaf.
@@ -33,6 +77,11 @@ inventory/
     DC1-Leaf1.example.yml
 vars/
   network_attach_request.example.yml
+python/
+  tools/
+    ndfc_alarm_diff.py
+  config/
+    ndfc.yml.example
 ```
 
 ## Safety
@@ -46,6 +95,9 @@ Do not commit:
 - private inventory
 - real tokens
 - local virtual environments
+- `python/config/ndfc.yml`
+- `python/runs/`
+- `python/snapshots/`
 
 ## Example Usage
 
