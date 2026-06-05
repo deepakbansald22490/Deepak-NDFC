@@ -1,0 +1,15 @@
+---
+all:
+  children:
+    target_switches:
+      vars:
+        ansible_connection: ansible.netcommon.network_cli
+        ansible_network_os: cisco.nxos.nxos
+        ansible_user: "{{ lookup('env', 'NXOS_USER') }}"
+        ansible_password: "{{ lookup('env', 'NXOS_PASSWORD') }}"
+        ansible_become: false
+      hosts:
+        DC1-LEAF-101:
+          ansible_host: 192.0.2.101
+        DC1-LEAF-102:
+          ansible_host: 192.0.2.102

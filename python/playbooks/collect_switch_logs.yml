@@ -1,0 +1,40 @@
+---
+- name: Collect full switch logging output
+  hosts: target_switches
+  gather_facts: false
+
+  vars:
+    log_command: "show logging logfile"
+    run_root: "{{ playbook_dir }}/../runs"
+    log_dir: "{{ run_root }}/{{ change_id }}/switch-logs"
+
+  pre_tasks:
+    - name: Validate change_id is provided
+      ansible.builtin.assert:
+        that:
+          - change_id is defined
+          - change_id | string | length > 0
+        fail_msg: "Pass a change ID, for example: -e change_id=CHG001234"
+      run_once: true
+
+    - name: Create local switch log directory
+      ansible.builtin.file:
+        path: "{{ log_dir }}"
+        state: directory
+        mode: "0750"
+      delegate_to: localhost
+      run_once: true
+
+  tasks:
+    - name: Collect full switch log
+      cisco.nxos.nxos_command:
+        commands:
+          - "{{ log_command }}"
+      register: switch_log_output
+
+    - name: Save raw switch log locally
+      ansible.builtin.copy:
+        dest: "{{ log_dir }}/{{ inventory_hostname }}.log"
+        content: "{{ switch_log_output.stdout[0] | default('') }}\n"
+        mode: "0640"
+      delegate_to: localhost

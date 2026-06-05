@@ -21,6 +21,8 @@ The Python tool focuses on a NOC-style before/after change check:
 3. Compare both snapshots.
 4. Save the terminal report under a per-change run folder.
 
+The second Python workflow collects full switch logs with Ansible and filters them by change-window timestamp.
+
 ## Python Jump Host Workflow
 
 The Python workflow is intended to run from a controlled jump host.
@@ -53,6 +55,28 @@ python/runs/CHG001234/
   report.txt
 ```
 
+## Switch Log Workflow
+
+Use Ansible to collect full NX-OS logs from the target switches:
+
+```bash
+cd python
+
+cp inventory/switches.example.yml inventory/switches.yml
+
+ansible-playbook -i inventory/switches.yml playbooks/collect_switch_logs.yml \
+  -e change_id=CHG001234
+```
+
+Then generate a filtered report for the change window:
+
+```bash
+python3 tools/switch_log_report.py \
+  --change-id CHG001234 \
+  --start "2026 Jun 4 01:51:29" \
+  --end "2026 Jun 4 02:30:00"
+```
+
 ## Ansible Workflow
 
 The current Ansible playbooks include workflows such as:
@@ -80,6 +104,11 @@ vars/
 python/
   tools/
     ndfc_alarm_diff.py
+    switch_log_report.py
+  playbooks/
+    collect_switch_logs.yml
+  inventory/
+    switches.example.yml
   config/
     ndfc.yml.example
 ```
@@ -96,6 +125,7 @@ Do not commit:
 - real tokens
 - local virtual environments
 - `python/config/ndfc.yml`
+- `python/inventory/switches.yml`
 - `python/runs/`
 - `python/snapshots/`
 

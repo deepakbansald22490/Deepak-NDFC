@@ -48,6 +48,59 @@ runs/CHG001234/
   report.txt
 ```
 
+## Switch Log Collection
+
+Use Ansible to collect full switch logs from the target switches, then use Python to filter the saved logs by change-window timestamp.
+
+Copy the example inventory and update it with the switches you want to check:
+
+```bash
+cp inventory/switches.example.yml inventory/switches.yml
+```
+
+Set switch credentials as environment variables:
+
+```bash
+export NXOS_USER='admin'
+export NXOS_PASSWORD='your-password'
+```
+
+Collect full logs from every switch in the `target_switches` group:
+
+```bash
+ansible-playbook -i inventory/switches.yml playbooks/collect_switch_logs.yml \
+  -e change_id=CHG001234
+```
+
+The playbook runs:
+
+```text
+show logging logfile
+```
+
+Raw switch logs are saved under:
+
+```text
+runs/CHG001234/switch-logs/
+  DC1-LEAF-101.log
+  DC1-LEAF-102.log
+```
+
+Generate a filtered report for the change window:
+
+```bash
+python3 tools/switch_log_report.py \
+  --change-id CHG001234 \
+  --start "2026 Jun 4 01:51:29" \
+  --end "2026 Jun 4 02:30:00"
+```
+
+The report is saved here:
+
+```text
+runs/CHG001234/switch-log-report.txt
+```
+
 The lower-level commands are still useful while learning or troubleshooting.
 
 Take combined change snapshots manually:
